@@ -4,6 +4,17 @@ return {
     enableExtraMenu = true,
     flipTime = 15000,
 
+    vehicleItems = {
+      {
+          id = 'quickgivevehkeys',
+          icon = 'key',
+          label = locale('options.quickgivekeys'),
+          serverEvent = 'qbx_vehiclekeys:server:quickgivekeys',
+          outSideVehicleOnly = true,
+          nearByPlayerOnly = true
+      },
+    },
+
     menuItems = {
         {
             id = 'citizen',

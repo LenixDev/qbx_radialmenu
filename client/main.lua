@@ -113,7 +113,9 @@ function setupVehicleMenu(seat)
         menu = 'vehicleMenu'
     }
 
-    local vehicleItems = {{
+    local vehicleItems = {}
+    if vehicleFlipped then
+      vehicleItems[#vehicleItems + 1] = {
         id = 'vehicle-flip',
         label = locale('options.flip'),
         icon = 'car-burst',
@@ -121,11 +123,22 @@ function setupVehicleMenu(seat)
             TriggerEvent('radialmenu:flipVehicle')
             lib.hideRadial()
         end
-    }}
+      }
+    end
 
-    vehicleItems[#vehicleItems + 1] = convert(config.vehicleDoors)
+    if config.vehicleItems then
+        for i = 1, #config.vehicleItems do
+            vehicleItems[#vehicleItems + 1] = convert(config.vehicleItems[i])
+        end
+    end
 
+    if config.vehicleWindows then
     vehicleItems[#vehicleItems + 1] = convert(config.vehicleWindows)
+    end
+
+    if config.vehicleDoors then
+        vehicleItems[#vehicleItems + 1] = convert(config.vehicleDoors)
+    end
 
     if config.enableExtraMenu then
         vehicleItems[#vehicleItems + 1] = convert(config.vehicleExtras)
