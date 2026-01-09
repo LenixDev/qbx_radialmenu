@@ -55,8 +55,12 @@ local function convert(tbl)
     if tbl.items then
         local items = {}
         for _, v in pairs(tbl.items) do
-            items[#items + 1] = convert(v)
+            local converted<const> = convert(v)
+            if converted then
+                items[#items + 1] = converted
+            end
         end
+        if #items == 0 then return end
 
         lib.registerRadial({
             id = tbl.id .. 'Menu',
@@ -143,7 +147,10 @@ local function setupRadialMenu()
     setupVehicleMenu()
 
     for _, v in pairs(config.menuItems) do
-        lib.addRadialItem(convert(v))
+        local converted<const> = convert(v)
+        if converted then
+            lib.addRadialItem(converted)
+        end
     end
 
     if config.gangItems[QBX.PlayerData.gang.name] then
