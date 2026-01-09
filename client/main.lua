@@ -1,8 +1,24 @@
 local config = require 'config.client'
 
+local lastOutSideVehicle = false
+local lastNearVehicle = false
+local onVehicle = false
+local lastNearPlayer = false
+local vehicleFlipped = false
+
 -----------------------
 ------- Events --------
 -----------------------
+
+lib.onCache('vehicle', function(vehicle)
+    if vehicle then
+        onVehicle = true
+        setupVehicleMenu(true)
+    else
+        onVehicle = false
+        setupVehicleMenu(false)
+    end
+end)
 
 if config.vehicleSeats then
     lib.onCache('vehicle', function(vehicle)
@@ -52,6 +68,18 @@ end
 -----------------------
 
 local function convert(tbl)
+    if tbl.onVehicleOnly and not onVehicle then
+        return
+    end
+    if tbl.outSideVehicleOnly and not lastOutSideVehicle then
+        return
+    end
+    if tbl.nearByVehicleOnly and not lastNearVehicle then
+        return
+    end
+    if tbl.nearByPlayerOnly and not lastNearPlayer then
+        return
+    end
     if tbl.items then
         local items = {}
         for _, v in pairs(tbl.items) do
@@ -101,7 +129,11 @@ local function convert(tbl)
                 action()
             end
         end,
-        keepOpen = tbl.keepOpen
+        keepOpen = tbl.keepOpen,
+        onVehicleOnly = tbl.onVehicleOnly,
+        outSideVehicleOnly = tbl.outSideVehicleOnly,
+        nearByVehicleOnly = tbl.nearByVehicleOnly,
+        nearByPlayerOnly = tbl.nearByPlayerOnly
     }
 end
 
@@ -116,13 +148,13 @@ function setupVehicleMenu(seat)
     local vehicleItems = {}
     if vehicleFlipped then
       vehicleItems[#vehicleItems + 1] = {
-        id = 'vehicle-flip',
-        label = locale('options.flip'),
-        icon = 'car-burst',
-        onSelect = function()
-            TriggerEvent('radialmenu:flipVehicle')
-            lib.hideRadial()
-        end
+          id = 'vehicle-flip',
+          label = locale('options.flip'),
+          icon = 'car-burst',
+          onSelect = function()
+              TriggerEvent('radialmenu:flipVehicle')
+              lib.hideRadial()
+          end
       }
     end
 
@@ -133,7 +165,7 @@ function setupVehicleMenu(seat)
     end
 
     if config.vehicleWindows then
-    vehicleItems[#vehicleItems + 1] = convert(config.vehicleWindows)
+        vehicleItems[#vehicleItems + 1] = convert(config.vehicleWindows)
     end
 
     if config.vehicleDoors then
@@ -414,6 +446,32 @@ RegisterNetEvent('QBCore:Client:OnGangUpdate', function(gang)
             icon = 'skull-crossbones',
             items = config.gangItems[gang.name]
         }))
+    end
+end)
+
+CreateThread(function()
+    while true do
+        local outSideVehicle<const> = lib.getClosestVehicle(GetEntityCoords(cache.ped), 5.0, false) ~= nil
+        local nearByVehicle<const> = lib.getClosestVehicle(GetEntityCoords(cache.ped), 5.0, true) ~= nil
+        local closestPlayer<const>, _<const> = lib.getClosestPlayer(GetEntityCoords(cache.ped))
+        local nearPlayer<const> = closestPlayer ~= nil
+
+        local playerCoords<const> = GetEntityCoords(cache.ped)
+        local closestVehicle<const> = lib.getClosestVehicle(playerCoords, 3.0)
+        local flipableVehicle<const> = closestVehicle and not IsVehicleOnAllWheels(closestVehicle)
+
+        local outsideStatusChanged<const> = outSideVehicle ~= lastOutSideVehicle
+        local nearByVehicleChanged<const> = nearByVehicle ~= lastNearVehicle
+        local nearPlayerChanged<const> = nearPlayer ~= lastNearPlayer
+        local vehicleFlipStateChanged<const> = IsVehicleOnAllWheels(closestVehicle) ~= flipableVehicle
+        if outsideStatusChanged or nearByVehicleChanged or nearPlayerChanged or closestVehicle and not vehicleFlipStateChanged then
+            lastOutSideVehicle = outSideVehicle
+            lastNearVehicle = nearByVehicle
+            lastNearPlayer = nearPlayer
+            vehicleFlipped = flipableVehicle
+            setupRadialMenu()
+        end
+        Wait(1500)
     end
 end)
 

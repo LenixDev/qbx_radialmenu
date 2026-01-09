@@ -25,13 +25,15 @@ return {
                     id = 'givenum',
                     icon = 'address-book',
                     label = 'Give Contact Details',
-                    event = 'qb-phone:client:GiveContactDetails'
+                    event = 'qb-phone:client:GiveContactDetails',
+                    nearByPlayerOnly = true
                 },
                 {
                     id = 'getintrunk',
                     icon = 'car',
                     label = 'Get In Trunk',
-                    event = 'qb-trunk:client:GetIn'
+                    event = 'qb-trunk:client:GetIn',
+                    outSideVehicleOnly = true
                 },
                 {
                     id = 'cornerselling',
@@ -61,6 +63,7 @@ return {
                             icon = 'car-side',
                             label = 'Take Out Vehicle',
                             event = 'police:client:SetPlayerOutVehicle',
+                            nearByVehicleOnly = true
                         },
                         {
                             id = 'stealPlayer',
@@ -377,6 +380,7 @@ return {
                 icon = 'eye-slash',
                 label = 'Show/Hide Meter',
                 event = 'qb-taxi:client:toggleMeter',
+                onVehicleOnly = true
             },
             {
                 id = 'togglemouse',
