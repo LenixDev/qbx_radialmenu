@@ -231,6 +231,29 @@ local function isEMS()
     return QBX.PlayerData.job.type == 'ems' and QBX.PlayerData.job.onduty
 end
 
+local loadBlipPreferences<const> = function()
+    if metadataLoaded then return end
+
+    local playerData<const> = QBX.PlayerData
+    if playerData and playerData.metadata then
+        local blipPreferences = playerData.metadata.blipPreferences or {}
+
+        for category, isVisible in pairs(blipPreferences) do
+            categoryVisible[category] = isVisible
+
+            if toggleableBlips[category] then
+                for blipId, _ in pairs(toggleableBlips[category]) do
+                    if DoesBlipExist(blipId) then
+                        SetBlipAlpha(blipId, isVisible and 255 or 0)
+                    end
+                end
+            end
+        end
+
+        metadataLoaded = true
+    end
+end
+
 -- Events
 RegisterNetEvent('radialmenu:client:deadradial', function(isDead)
     if isDead then
@@ -422,6 +445,7 @@ end)
 -- Sets the metadata when the player spawns
 AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     setupRadialMenu()
+    loadBlipPreferences()
 end)
 
 RegisterNetEvent('QBCore:Client:OnJobUpdate', function(job)
@@ -453,49 +477,26 @@ RegisterNetEvent('QBCore:Client:OnGangUpdate', function(gang)
     end
 end)
 
-local loadBlipPreferences<const> = function()
-    if metadataLoaded then return end
-
-    local playerData<const> = QBX.PlayerData
-    if playerData and playerData.metadata then
-        local blipPreferences = playerData.metadata.blipPreferences or {}
-
-        for category, isVisible in pairs(blipPreferences) do
-            categoryVisible[category] = isVisible
-
-            if toggleableBlips[category] then
-                for blipId, _ in pairs(toggleableBlips[category]) do
-                    if DoesBlipExist(blipId) then
-                        SetBlipAlpha(blipId, isVisible and 255 or 0)
-                    end
-                end
-            end
-        end
-
-        metadataLoaded = true
-    end
-end
-
 local saveBlipPreferences<const> = function ()
   TriggerServerEvent('radialmenu:server:saveBlipPreferences', categoryVisible)
 end
 
+---@param category string
 local toggleBlipsForCategory<const> = function(category)
     if not category then
-        lib.print.error("No category provided for toggling blips.")
+        lib.print.warn("No category provided for toggling blips.")
         return
     end
-
-    if categoryVisible[category] == nil then
-        categoryVisible[category] = true -- Default to visible
-    else
-        categoryVisible[category] = not categoryVisible[category]
-    end
-
-    local isVisible<const> = categoryVisible[category]
     local toggledCount = 0
     local blipCategoryName = string.gsub(category, "_", " ") -- Replaces underscores with spaces
     blipCategoryName = blipCategoryName:sub(1,1):upper() .. blipCategoryName:sub(2) -- Capitalizes the first letter
+
+    if categoryVisible[category] == nil then
+      categoryVisible[category] = true -- Default to visible
+    else
+      categoryVisible[category] = not categoryVisible[category]
+    end
+    local isVisible<const> = categoryVisible[category]
 
     if toggleableBlips[category] then
         for blipId, _ in pairs(toggleableBlips[category]) do
@@ -521,21 +522,23 @@ local toggleBlipsForCategory<const> = function(category)
     return isVisible
 end
 
-RegisterNetEvent('qbx_radialmenu:registerToggleableBlip', function(blipId, category)
+---@param blipHandle number
+---@param category string
+local registerToggleableBlip<const> = function(blipHandle, category)
     if not category then
-        lib.print.error(("No category provided when registering blipId: %s"):format(tostring(blipId)))
+        lib.print.error(("No category provided when registering blipId: %s"):format(tostring(blipHandle)))
         return
     end
-    if not blipId then
+    if not blipHandle then
         lib.print.error(("No blipId provided for registration in category: %s"):format(category))
         return
     end
 
-    if DoesBlipExist(blipId) then
+    if DoesBlipExist(blipHandle) then
         if not toggleableBlips[category] then
             toggleableBlips[category] = {}
         end
-        toggleableBlips[category][blipId] = true
+        toggleableBlips[category][blipHandle] = true
 
         if not metadataLoaded then
             loadBlipPreferences()
@@ -549,22 +552,15 @@ RegisterNetEvent('qbx_radialmenu:registerToggleableBlip', function(blipId, categ
         end
 
         if isCurrentlyVisible then
-            SetBlipAlpha(blipId, 255)
+            SetBlipAlpha(blipHandle, 255)
         else
-            SetBlipAlpha(blipId, 0)
+            SetBlipAlpha(blipHandle, 0)
         end
     else
-        lib.print.warn(("Attempted to register non-existent blip %s for category: %s"):format(tostring(blipId), category))
+        lib.print.warn(("Attempted to register non-existent blip %s for category: %s"):format(tostring(blipHandle), category))
     end
-end)
+end
 
-RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
-    loadBlipPreferences()
-end)
-
-RegisterNetEvent('qbx_radialmenu:client:toggleShops', function()
-    toggleBlipsForCategory('shops')
-end)
 
 CreateThread(function()
     while true do
@@ -613,3 +609,6 @@ end
 
 exports('RemoveOption', removeOption)
 createQBExport('RemoveOption', removeOption)
+
+exports('toggleBlip', toggleBlipsForCategory)
+exports('registerToggleableBlip', registerToggleableBlip)
